@@ -1,0 +1,4 @@
+api/secrets.php
+api/uploads/*
+.env
+tmp/
