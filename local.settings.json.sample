@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "COSMOS_ENDPOINT": "https://<your-cosmos-account>.documents.azure.com:443/",
+    "COSMOS_KEY": "<your-cosmos-key>",
+    "COSMOS_DB_NAME": "belegabrechnung",
+
+    "MICROSOFT_TENANT_ID": "<your-tenant-id>",
+    "MICROSOFT_CLIENT_ID": "<your-client-id>",
+    "MICROSOFT_CLIENT_SECRET": "<your-client-secret>",
+    "MICROSOFT_REDIRECT_URI": "http://localhost:7071/api/auth/callback",
+    "MICROSOFT_GROUP_ROLE_MAP": "Belegabrechnung-Freigeber=freigeber,Belegabrechnung-Kassenwart=kassenwart,Belegabrechnung-Admin=admin",
+
+    "AZURE_STORAGE_CONNECTION_STRING": "<your-storage-connection-string>"
+  }
+}

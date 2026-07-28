@@ -1,4 +1,4 @@
-api/secrets.php
-api/uploads/*
 .env
 tmp/
+
+local.settings.json
