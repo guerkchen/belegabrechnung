@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "index.js",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "start": "func start",
+    "start": "npx azure-functions-core-tools@4 start",
     "setup:cosmos": "node scripts/setup_cosmos.js"
   },
   "dependencies": {
