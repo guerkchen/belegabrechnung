@@ -1,10 +1,45 @@
 import { CosmosClient } from '@azure/cosmos';
+import fs from 'fs';
+import { webcrypto as nodeWebCrypto, randomUUID as nodeRandomUUID } from 'node:crypto';
 
-const endpoint = process.env.COSMOS_ENDPOINT;
-const key = process.env.COSMOS_KEY;
-const dbName = process.env.COSMOS_DB_NAME;
+// Ensure globalThis.crypto.randomUUID is available (Node < 19 workaround)
+if (!globalThis.crypto) {
+  globalThis.crypto = nodeWebCrypto;
+}
+if (!globalThis.crypto?.randomUUID) {
+  // Fallback to Node's randomUUID if webcrypto.randomUUID isn't present
+  globalThis.crypto = globalThis.crypto || {};
+  globalThis.crypto.randomUUID = nodeRandomUUID;
+}
+
+// Load required env vars from local.settings.json (Azure Functions style)
+// if they are not already present in process.env. This makes `npm run setup:cosmos`
+// work without having to manually export env vars first.
+function hydrateEnvFromLocalSettings() {
+  try {
+    if (!fs.existsSync('local.settings.json')) return;
+    const text = fs.readFileSync('local.settings.json', 'utf8');
+    const json = JSON.parse(text);
+    const values = json?.Values || {};
+    for (const k of ['COSMOS_ENDPOINT', 'COSMOS_KEY', 'COSMOS_DB_NAME']) {
+      if (!process.env[k] && values[k]) {
+        process.env[k] = values[k];
+      }
+    }
+  } catch (e) {
+    // Non-fatal: just log a hint and continue so we still error clearly below if vars are missing
+    console.warn('Warning: could not read local.settings.json:', e.message);
+  }
+}
 
 async function main() {
+  // Ensure env is hydrated from local.settings.json if available
+  hydrateEnvFromLocalSettings();
+
+  const endpoint = process.env.COSMOS_ENDPOINT;
+  const key = process.env.COSMOS_KEY;
+  const dbName = process.env.COSMOS_DB_NAME;
+
   if (!endpoint || !key || !dbName) {
     console.error('Missing COSMOS_ENDPOINT or COSMOS_KEY or COSMOS_DB_NAME');
     process.exit(1);
