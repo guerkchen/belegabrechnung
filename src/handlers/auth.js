@@ -64,7 +64,7 @@ export async function authCallback(request) {
     });
 
     // Redirect to frontend hosted by Functions and pass token in fragment (avoid server logs)
-    const redirect = '/api/frontend/index.html#auth=success&token=' + encodeURIComponent(appToken);
+    const redirect = '/index.html#auth=success&token=' + encodeURIComponent(appToken);
     return { status: 302, headers: { Location: redirect } };
   } catch (e) {
     return jsonResponse({ error: 'Authentication failed: ' + e.message }, 500);
