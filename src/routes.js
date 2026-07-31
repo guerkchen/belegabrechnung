@@ -115,52 +115,55 @@ app.http('receiptStatistics', {
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => statisticsHandler(request, user)),
 });
 
+// Note: Use singular resource path for ID-based routes to avoid conflicts with
+// collection subpaths like /api/receipts/statistics or /api/receipts/payable
+// which could otherwise be matched by a greedy {id} parameter in some runtimes.
 app.http('getReceiptHistory', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}/history',
+  route: 'api/receipt/{id}/history',
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => getReceiptHistoryHandler(request, user, request.params.id)),
 });
 
 app.http('getReceipt', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}',
+  route: 'api/receipt/{id}',
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => getReceiptHandler(request, user, request.params.id)),
 });
 
 app.http('updateReceipt', {
   methods: ['PUT'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}',
+  route: 'api/receipt/{id}',
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => updateReceiptHandler(request, user, request.params.id)),
 });
 
 app.http('deleteReceipt', {
   methods: ['DELETE'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}',
+  route: 'api/receipt/{id}',
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => deleteReceiptHandler(request, user, request.params.id)),
 });
 
 app.http('approveReceipt', {
   methods: ['POST'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}/approve',
+  route: 'api/receipt/{id}/approve',
   handler: withAuth([ROLES.FREIGEBER, ROLES.ADMIN], async (request, user) => approveReceiptHandler(request, user, request.params.id)),
 });
 
 app.http('rejectReceipt', {
   methods: ['POST'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}/reject',
+  route: 'api/receipt/{id}/reject',
   handler: withAuth([ROLES.FREIGEBER, ROLES.ADMIN], async (request, user) => rejectReceiptHandler(request, user, request.params.id)),
 });
 
 app.http('payReceipt', {
   methods: ['POST'],
   authLevel: 'anonymous',
-  route: 'api/receipts/{id}/pay',
+  route: 'api/receipt/{id}/pay',
   handler: withAuth([ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => payReceiptHandler(request, user, request.params.id)),
 });
 
@@ -197,6 +200,7 @@ app.http('spaCatchAll', {
     return serveFrontend();
   },
 });
+
 
 
 

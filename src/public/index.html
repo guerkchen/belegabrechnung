@@ -415,7 +415,7 @@
           button.addEventListener('click', async () => {
             const id = button.getAttribute('data-id');
             try {
-              await apiRequest(`/receipts/${id}/approve`, { method: 'POST' });
+              await apiRequest(`/receipt/${id}/approve`, { method: 'POST' });
               await renderApproval();
             } catch (error) {
               alert(error.message);
@@ -427,7 +427,7 @@
           button.addEventListener('click', async () => {
             const id = button.getAttribute('data-id');
             try {
-              await apiRequest(`/receipts/${id}/reject`, { method: 'POST', body: { comment: 'Abgelehnt über UI' } });
+              await apiRequest(`/receipt/${id}/reject`, { method: 'POST', body: { comment: 'Abgelehnt über UI' } });
               await renderApproval();
             } catch (error) {
               alert(error.message);
@@ -471,7 +471,7 @@
           button.addEventListener('click', async () => {
             const id = button.getAttribute('data-id');
             try {
-              await apiRequest(`/receipts/${id}/pay`, { method: 'POST' });
+              await apiRequest(`/receipt/${id}/pay`, { method: 'POST' });
               await renderPayout();
             } catch (error) {
               alert(error.message);
