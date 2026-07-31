@@ -58,17 +58,20 @@ export async function buildMicrosoftAuthorizationUrl() {
 }
 
 export async function exchangeCodeForToken(code) {
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
+  // Be defensive: ensure all params are strings and send a plain string body.
+  const params = new URLSearchParams({
+    client_id: String(clientId),
+    client_secret: String(clientSecret),
     grant_type: 'authorization_code',
-    code,
-    redirect_uri: redirectUri,
+    code: String(code),
+    redirect_uri: String(redirectUri),
   });
   const { body: resBody, statusCode } = await request(`${getAuthBaseUrl()}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    // undici.request expects a string/Buffer/TypedArray/etc as body (unlike fetch).
+    // Explicitly pass the serialized form body to avoid type issues.
+    body: params.toString(),
   });
   const json = await resBody.json();
   if (statusCode >= 400) {
