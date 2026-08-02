@@ -12,7 +12,7 @@
     "MICROSOFT_CLIENT_ID": "<your-client-id>",
     "MICROSOFT_CLIENT_SECRET": "<your-client-secret>",
     "MICROSOFT_REDIRECT_URI": "http://localhost:7071/api/auth/callback",
-    "MICROSOFT_GROUP_ROLE_MAP": "Belegabrechnung-Freigeber=freigeber,Belegabrechnung-Kassenwart=kassenwart,Belegabrechnung-Admin=admin",
+    "MICROSOFT_GROUP_ROLE_MAP": "freigeber@contoso.com=freigeber,kassenwart@contoso.com=kassenwart,admin@contoso.com=admin",
 
     "AZURE_STORAGE_CONNECTION_STRING": "<your-storage-connection-string>"
   }

@@ -22,6 +22,8 @@ import {
   approveReceiptHandler,
   rejectReceiptHandler,
   payReceiptHandler,
+  treasurerRejectApprovedReceiptHandler,
+  getLastPayoutDataHandler,
 } from './handlers/receipts.js';
 
 function cors204() {
@@ -92,6 +94,14 @@ app.http('listMyReceipts', {
   authLevel: 'anonymous',
   route: 'api/receipts/me',
   handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => listMyReceiptsHandler(request, user)),
+});
+
+// Get last payout bank data for the current user
+app.http('getMyLastPayoutData', {
+  methods: ['GET'],
+  authLevel: 'anonymous',
+  route: 'api/receipts/me/last-payout',
+  handler: withAuth([ROLES.USER, ROLES.FREIGEBER, ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => getLastPayoutDataHandler(request, user)),
 });
 
 app.http('pendingApprovalReceipts', {
@@ -167,6 +177,14 @@ app.http('payReceipt', {
   handler: withAuth([ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => payReceiptHandler(request, user, request.params.id)),
 });
 
+// Kassenwart kann bereits freigegebene Belege ablehnen
+app.http('treasurerRejectApprovedReceipt', {
+  methods: ['POST'],
+  authLevel: 'anonymous',
+  route: 'api/receipt/{id}/reject-approved',
+  handler: withAuth([ROLES.KASSENWART, ROLES.ADMIN], async (request, user) => treasurerRejectApprovedReceiptHandler(request, user, request.params.id)),
+});
+
 // Frontend SPA
 // Serve index.html for root path "/"
 app.http('rootFrontend', {
@@ -200,6 +218,8 @@ app.http('spaCatchAll', {
     return serveFrontend();
   },
 });
+
+
 
 
 

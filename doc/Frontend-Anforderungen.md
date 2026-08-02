@@ -92,7 +92,9 @@ Anforderungen:
   - Beschreibung
   - Betrag
   - Datum
-  - PDF-Link oder Vorschau
+  - Einheitliche Darstellung mit dem Screen „Belege auszahlen“ (gleiche Listenoptik, Aktionsbereich rechts).
+  - Ein "Anzeigen"-Button öffnet eine detailierte Belegansicht in einem Modal (identisch zu "Meine Belege" und "Beleghistorie").
+  - Freigeber soll die Möglichkeit haben, einen Beleg zu genehmigen oder abzulehnen.
 - Freigeber soll die Möglichkeit haben, einen Beleg zu genehmigen oder abzulehnen.
 - Nach der Entscheidung soll der Status entsprechend aktualisiert werden.
 
@@ -107,7 +109,10 @@ Anforderungen:
   - Betrag
   - Einreicher
   - Freigabedatum
-- Kassenwart soll einen Beleg als "Ausgezahlt" markieren können.
+  - Einheitliche Darstellung mit dem Screen „Belege freigeben“ (gleiche Listenoptik, Aktionsbereich rechts).
+  - Ein "Anzeigen"-Button öffnet eine detailierte Belegansicht in einem Modal (identisch zu "Meine Belege" und "Beleghistorie").
+  - Kassenwart soll einen Beleg als "Ausgezahlt" markieren können.
+  - Kassenwart soll bei Bedarf einen bereits freigegebenen Beleg ablehnen können (z. B. bei Unklarheiten), optional mit Kommentar.
 
 ### 6. Beleghistorie
 Ziel: Historie aller relevanten Belege einsehen.

@@ -25,7 +25,6 @@ Als User möchte ich eine Übersicht über meine hochgeladenen Belege haben. Ich
 
 Als User möchte ich in der Lage sein, Belege, welche noch nicht freigegeben oder abgelehnt wurden, zu löschen oder zu editieren. (Ausbaustufe 2)
 
-
 Als Freigeber möchte ich, wie ein User, in der Lage sein, selbst Belege hochzuladen. (Ausbaustufe 1)
 
 Als Freigeber möchte ich alle offenen Belege zur Freigabe sehen können.
@@ -44,3 +43,16 @@ Als Kassenwart möchte ich, wie ein User, in der Lage sein, selbst Belege hochzu
 Als Kassenwart möchte ich alle Belege zur Auszahlung (Freigegeben) sehen.
 
 Als Kassenwart möchte ich in der Lage sein, freigegebene Belege in den Status "Ausgezahlt" zu bewegen.
+
+Als Kassenwart möchte ich in der Lage sein, bereits freigegebene Belege abzulehnen (z. B. wenn bei der Auszahlung Unklarheiten auftreten).
+
+
+Nacharbeiten:  
+
+Als User möchte ich unter "Meine Belege" in der Lage sein, einen Beleg anzuzeigen und zu löschen, wenn er noch im Status "zur_Freigabe" ist.
+
+Als Administrator möchte ich in der Lage sein, über ein Dropdown Menü zwischen den drei Sichtweisen (User, Freigeber, Kassenwart) hin und her zu wechseln.
+
+Als User möchte ich beim Einreichen des Belegs die Möglichkeit haben, ein Konto für die Auszahlung (Name des Kontobesitzers und IBAN) anzugeben. Diese Daten sollen dem Schatzmeister in der Auszahlungsansicht und der Belegansicht sichtbar sein. Die Kontodaten sollen mir nur bei meinen eigenen Belegen angezeigt werden. Der Kassenwart soll alle Kontodaten sehen können. Anderen Usern und den Freigebern wird "<protected>" angezeigt.
+
+Als User möchte ich beim Einreichen eines neuen Belegs die Möglichkeit haben einen Knopf zu drücken "Kontodaten aus letzter Abrechnung laden". Damit werden der Kontoinhaber und die IBAN mit den Daten aus meinem zuletzt eingereichten Beleg befüllt.

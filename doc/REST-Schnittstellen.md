@@ -19,6 +19,7 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
   - Kann wie ein User Belege hochladen.
   - Kann alle Belege sehen, die freigegeben wurden.
   - Kann freigegebene Belege auf "Ausgezahlt" setzen.
+  - Kann bereits freigegebene Belege wieder auf "Abgelehnt" setzen (z. B. bei Unklarheiten in der Auszahlung).
 
 ## Allgemeine Regeln
 
@@ -33,6 +34,7 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
   - zur Freigabe -> Freigegeben
   - zur Freigabe -> Abgelehnt
   - Freigegeben -> Ausgezahlt
+  - Freigegeben -> Abgelehnt (nur Kassenwart/Admin)
 
 ## Endpunkte
 
@@ -46,27 +48,27 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
 
 | Methode | Endpoint | Zweck | Erlaubt für |
 |---|---|---|---|
-| POST | /api/receipts | Neuen Beleg hochladen (PDF + Beschreibung, Betrag, Belegdaten) | User, Freigeber, Kassenwart |
-| GET | /api/receipts/me | Liste aller eigenen Belege | User, Freigeber, Kassenwart |
-| GET | /api/receipts/{id} | Details zu einem bestimmten Beleg | Besitzer, Freigeber, Kassenwart |
-| PUT | /api/receipts/{id} | Beleg bearbeiten (nur wenn noch nicht freigegeben/abgelehnt wurde) | Besitzer |
-| DELETE | /api/receipts/{id} | Beleg löschen (nur wenn noch nicht freigegeben/abgelehnt wurde) | Besitzer |
+| POST | /api/receipts | Neuen Beleg hochladen (PDF + Beschreibung, Betrag, Belegdaten) – optional mit Kontodaten (Kontoinhaber, IBAN) | User, Freigeber, Kassenwart |
+| GET | /api/receipt/{id} | Details zu einem bestimmten Beleg | Besitzer, Freigeber, Kassenwart |
+| PUT | /api/receipt/{id} | Beleg bearbeiten (nur wenn noch nicht freigegeben/abgelehnt wurde) | Besitzer |
+| DELETE | /api/receipt/{id} | Beleg löschen (nur im Status "zur Freigabe") | Besitzer |
 
 ### 3. Freigabe-Workflow
 
 | Methode | Endpoint | Zweck | Erlaubt für |
 |---|---|---|---|
 | GET | /api/receipts/pending-approval | Alle Belege mit Status "zur Freigabe" | Freigeber |
-| POST | /api/receipts/{id}/approve | Beleg genehmigen und Status auf "Freigegeben" setzen | Freigeber |
-| POST | /api/receipts/{id}/reject | Beleg ablehnen und Status auf "Abgelehnt" setzen | Freigeber |
-| GET | /api/receipts/approved | Liste aller Belege mit Status "Freigegeben" oder "Ausgezahlt" | Freigeber, Kassenwart |
+| | POST | /api/receipt/{id}/approve | Beleg genehmigen und Status auf "Freigegeben" setzen | Freigeber |
+| | POST | /api/receipt/{id}/reject | Beleg ablehnen und Status auf "Abgelehnt" setzen | Freigeber |
+| | GET | /api/receipts?status=Freigegeben | Liste aller Belege mit Status "Freigegeben" (alternativ Filter über Status) | Freigeber, Kassenwart |
 
 ### 4. Auszahlung
 
 | Methode | Endpoint | Zweck | Erlaubt für |
 |---|---|---|---|
 | GET | /api/receipts/payable | Alle Belege mit Status "Freigegeben" | Kassenwart |
-| POST | /api/receipts/{id}/pay | Beleg auf "Ausgezahlt" setzen | Kassenwart |
+| | POST | /api/receipt/{id}/pay | Beleg auf "Ausgezahlt" setzen | Kassenwart |
+| POST | /api/receipt/{id}/reject-approved | Bereits freigegebenen Beleg wieder auf "Abgelehnt" setzen (optional mit comment) | Kassenwart |
 
 ### 5. Filterung, Suche und Auswertung
 
@@ -74,7 +76,9 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
 |---|---|---|---|
 | GET | /api/receipts?from=...&to=...&status=... | Gefilterte Belegliste nach Datum und Status | User, Freigeber, Kassenwart je nach Sichtbarkeit |
 | GET | /api/receipts/statistics | Zählung der Belege pro Status, z. B. für den eigenen Nutzer | User, Freigeber, Kassenwart |
-| GET | /api/receipts/{id}/history | Verlauf des Belegs, inklusive Einreicher und Freigabe-/Ablehnungs-Entscheidung | Besitzer, Freigeber, Kassenwart |
+| GET | /api/receipt/{id}/history | Verlauf des Belegs, inklusive Einreicher und Freigabe-/Ablehnungs-Entscheidung | Besitzer, Freigeber, Kassenwart |
+
+Hinweis: Für ID-basierte Beleg-Endpunkte wird bewusst die Singular-Ressource "/api/receipt/{id}" verwendet, um Konflikte mit Unterpfaden wie "/api/receipts/statistics" zu vermeiden.
 
 ## Hinweise zur Umsetzung
 
@@ -82,6 +86,11 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
 - Die API sollte bei der Erstellung eines Belegs automatisch den Status "zur Freigabe" setzen.
 - Für Statusänderungen sollte eine Prüfung auf die erlaubten Übergänge erfolgen.
 - Für die Audit-Funktion sollten Einreicher, Freigebender und Ablehnender in der Datenbank gespeichert werden.
+ - Kontodaten (Kontoinhaber, IBAN) können optional pro Beleg mitgegeben werden. IBAN wird serverseitig validiert (IBAN-Format inkl. Mod-97-Prüfung).
+ - Sichtbarkeit Kontodaten:
+   - Besitzer (Einreicher) sieht Kontodaten seiner eigenen Belege.
+   - Kassenwart (und Admin) sieht Kontodaten aller Belege.
+   - Andere User und Freigeber sehen stattdessen den Platzhalter „<protected>“.
 
 ## MVP vs. Ausbau
 

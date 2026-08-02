@@ -130,6 +130,17 @@ export async function getReceiptsForUser(userId) {
   return resources;
 }
 
+// Get the latest receipt for a specific user (by created_at DESC)
+export async function getLatestReceiptForUser(userId) {
+  const { resources } = await containers.receipts.items
+    .query({
+      query: 'SELECT TOP 1 * FROM c WHERE c.user_id = @uid ORDER BY c.created_at DESC',
+      parameters: [{ name: '@uid', value: userId }]
+    }, { enableCrossPartitionQuery: true })
+    .fetchAll();
+  return resources && resources.length ? resources[0] : null;
+}
+
 export async function getReceiptsByStatus(status) {
   const { resources } = await containers.receipts.items
     .query({ query: 'SELECT * FROM c WHERE c.status = @status ORDER BY c.created_at DESC', parameters: [{ name: '@status', value: status }] }, { enableCrossPartitionQuery: true })

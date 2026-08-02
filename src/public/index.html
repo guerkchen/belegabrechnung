@@ -42,6 +42,25 @@
       </div>
     </div>
   </footer>
+  
+  <!-- Global Receipt Detail Modal (reused across all views) -->
+  <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Belegdetails</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="receiptModalBody">Lade…</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -70,9 +89,10 @@
     }
 
     // State
-    let role = 'user';
+    let role = 'user'; // current UI view role (for admins this can differ from actual role)
     let activePage = 'home';
     let authUser = null;
+    const adminSelectableViews = ['user', 'freigeber', 'kassenwart'];
 
     const pages = {
       user: [
@@ -154,7 +174,24 @@
         return;
       }
 
-      userRoleLabel.textContent = getRoleLabel(role);
+      // Role label / role switcher for admins
+      if (authUser.role === 'admin') {
+        const currentLabel = getRoleLabel(role);
+        userRoleLabel.innerHTML = `
+          <div class="dropdown">
+            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="roleSwitcher" data-bs-toggle="dropdown" aria-expanded="false">
+              Ansicht: ${currentLabel}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="roleSwitcher">
+              ${adminSelectableViews.map(v => `
+                <li><a class="dropdown-item ${v === role ? 'active' : ''}" href="#" data-role-option="${v}">${getRoleLabel(v)}</a></li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+      } else {
+        userRoleLabel.textContent = getRoleLabel(role);
+      }
       logoutButton.classList.remove('d-none');
       navLinks.innerHTML = '';
 
@@ -170,6 +207,25 @@
         });
         navLinks.appendChild(li);
       });
+
+      // Wire role switcher handlers for admin
+      if (authUser.role === 'admin') {
+        document.querySelectorAll('[data-role-option]')?.forEach((el) => {
+          el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const selected = el.getAttribute('data-role-option');
+            if (!selected || !adminSelectableViews.includes(selected)) return;
+            role = selected;
+            try { localStorage.setItem('adminViewRole', role); } catch (_) {}
+            if (!pages[role].some(p => p.id === activePage)) {
+              activePage = 'home';
+            }
+            renderNav();
+            const page = pages[role].find((entry) => entry.id === activePage) || pages[role][0];
+            page.view();
+          });
+        });
+      }
     }
 
     async function logout() {
@@ -180,6 +236,7 @@
       } finally {
         clearToken();
         authUser = null;
+        try { localStorage.removeItem('adminViewRole'); } catch (_) {}
         role = 'user';
         activePage = 'home';
         renderNav();
@@ -216,6 +273,48 @@
     function formatCurrency(value) {
       const number = Number(value || 0);
       return `€ ${number.toFixed(2).replace('.', ',')}`;
+    }
+
+    // Date/time formatting helpers (German locale)
+    function formatDateDE(value) {
+      if (!value) return '';
+      try {
+        // Handle plain YYYY-MM-DD (treat as local date to avoid timezone shift)
+        const m = /^\d{4}-\d{2}-\d{2}$/.exec(String(value));
+        let d;
+        if (m) {
+          const [y, mo, da] = value.split('-').map((n) => parseInt(n, 10));
+          d = new Date(y, mo - 1, da);
+        } else {
+          d = new Date(value);
+          if (isNaN(d)) return '';
+        }
+        return new Intl.DateTimeFormat('de-DE', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(d);
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function formatDateTimeDE(value) {
+      if (!value) return '';
+      try {
+        const d = new Date(value);
+        if (isNaN(d)) return '';
+        // dd.mm.yyyy, HH:MM (24h)
+        return new Intl.DateTimeFormat('de-DE', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(d);
+      } catch (_) {
+        return '';
+      }
     }
 
     function getStatusBadge(status) {
@@ -312,11 +411,32 @@
                 <label class="form-label">PDF-Datei</label>
                 <input name="file" type="file" class="form-control" accept="application/pdf" required>
               </div>
+                <hr />
+                <div class="mb-2">
+                  <div class="form-text">Optional: Kontodaten für die Auszahlung. Bitte beide Felder ausfüllen, wenn Sie eine Kontoverbindung angeben möchten.</div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Kontoinhaber</label>
+                  <input name="payout_account_holder" type="text" class="form-control" placeholder="Max Mustermann">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">IBAN</label>
+                  <input name="payout_iban" type="text" class="form-control" placeholder="DE00 0000 0000 0000 0000 00">
+                </div>
+                <div class="mb-3 d-flex align-items-center gap-2">
+                  <button type="button" id="loadLastPayoutBtn" class="btn btn-outline-secondary btn-sm">Kontodaten aus letzter Abrechnung laden</button>
+                  <small class="text-muted">Füllt Kontoinhaber und IBAN aus dem zuletzt eingereichten Beleg.</small>
+                </div>
               <button class="btn btn-primary" type="submit">Einreichen</button>
             </form>
           </div>
         </div>
       `);
+
+      function formatIbanForDisplay(iban) {
+        const s = String(iban || '').replace(/\s+/g, '').toUpperCase();
+        return s.replace(/(.{4})/g, '$1 ').trim();
+      }
 
       document.getElementById('receiptForm').addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -325,11 +445,21 @@
         try {
           const file = formData.get('file');
           const base64 = await fileToBase64(file);
+          // Collect optional payout fields
+          const holder = String(formData.get('payout_account_holder') || '').trim();
+          const ibanRaw = String(formData.get('payout_iban') || '').trim();
+          const iban = ibanRaw.replace(/\s+/g, '').toUpperCase();
+          if ((holder && !iban) || (!holder && iban)) {
+            alert('Bitte geben Sie sowohl Kontoinhaber als auch IBAN an, oder lassen Sie beide Felder leer.');
+            return;
+          }
           const payload = {
             description: formData.get('description'),
             amount: String(formData.get('amount')),
             receipt_date: formData.get('receipt_date'),
-            file: { name: file.name, mimeType: file.type || 'application/pdf', base64 }
+            file: { name: file.name, mimeType: file.type || 'application/pdf', base64 },
+            payout_account_holder: holder || '',
+            payout_iban: iban || ''
           };
           const response = await apiRequest('/receipts', { method: 'POST', body: payload });
           alert(response.message || 'Beleg wurde eingereicht');
@@ -338,6 +468,28 @@
           alert(error.message);
         }
       });
+
+      // Wire the "load last payout data" button
+      const loadBtn = document.getElementById('loadLastPayoutBtn');
+      if (loadBtn) {
+        loadBtn.addEventListener('click', async () => {
+          const form = document.getElementById('receiptForm');
+          const holderInput = form.querySelector('[name="payout_account_holder"]');
+          const ibanInput = form.querySelector('[name="payout_iban"]');
+          try {
+            loadBtn.disabled = true;
+            loadBtn.textContent = 'Laden…';
+            const data = await apiRequest('/receipts/me/last-payout');
+            holderInput.value = data.payout_account_holder || '';
+            ibanInput.value = formatIbanForDisplay(data.payout_iban || '');
+          } catch (error) {
+            alert(error.message);
+          } finally {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Kontodaten aus letzter Abrechnung laden';
+          }
+        });
+      }
     }
 
     async function renderMine() {
@@ -346,27 +498,35 @@
       try {
         const response = await apiRequest('/receipts/me');
         const receipts = response.receipts || [];
-        const rows = receipts.map((receipt) => `
-          <tr>
-            <td>${receipt.description}</td>
-            <td>${formatCurrency(receipt.amount_euro)}</td>
-            <td><span class="badge ${getStatusBadge(receipt.status)} status-badge">${getStatusLabel(receipt.status)}</span></td>
-            <td>${receipt.receipt_date}</td>
-          </tr>
-        `).join('');
+          const rows = receipts.map((receipt) => {
+          const canDelete = receipt.status === 'zur_Freigabe';
+          return `
+            <tr>
+              <td>${escapeHtmlClient(receipt.description)}</td>
+              <td>${formatCurrency(receipt.amount_euro)}</td>
+              <td><span class="badge ${getStatusBadge(receipt.status)} status-badge">${getStatusLabel(receipt.status)}</span></td>
+                <td>${formatDateDE(receipt.receipt_date)}</td>
+              <td class="text-nowrap">
+                <button class="btn btn-sm btn-outline-primary me-2" data-action="show" data-id="${receipt.id}">Anzeigen</button>
+                ${canDelete ? `<button class="btn btn-sm btn-outline-danger" data-action="delete" data-id="${receipt.id}">Löschen</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
 
         setContent(`
           <div class="card shadow-sm">
             <div class="card-body">
               <h2 class="h4">Meine Belege</h2>
               <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                   <thead>
                     <tr>
                       <th>Beschreibung</th>
                       <th>Betrag</th>
                       <th>Status</th>
                       <th>Datum</th>
+                      <th style="width: 1%">Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>${rows}</tbody>
@@ -375,8 +535,91 @@
             </div>
           </div>
         `);
+
+        // Wire up actions
+        document.querySelectorAll('[data-action="show"]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            await showReceiptDetails(id);
+          });
+        });
+
+        document.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            await deleteReceipt(id);
+          });
+        });
       } catch (error) {
         setContent(`<div class="alert alert-danger">${escapeHtmlClient(error.message)}</div>`);
+      }
+    }
+
+    async function showReceiptDetails(id) {
+      try {
+        const { receipt } = await apiRequest(`/receipt/${id}`);
+        const container = document.getElementById('receiptModalBody');
+        if (!container) return;
+        const pdfLink = receipt.file_path ? `<a href="${escapeHtmlClient(receipt.file_path)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">PDF öffnen</a>` : '<span class="text-muted">Kein PDF verfügbar</span>';
+        container.innerHTML = `
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <h6 class="mb-0">${escapeHtmlClient(receipt.description)}</h6>
+              ${pdfLink}
+            </div>
+          </div>
+          <dl class="row mb-0">
+            <dt class="col-sm-4 col-lg-3">Beschreibung</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.description || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Betrag</dt>
+            <dd class="col-sm-8 col-lg-9">${formatCurrency(receipt.amount_euro)}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Status</dt>
+            <dd class="col-sm-8 col-lg-9"><span class="badge ${getStatusBadge(receipt.status)}">${getStatusLabel(receipt.status)}</span></dd>
+
+            <dt class="col-sm-4 col-lg-3">Belegdatum</dt>
+            <dd class="col-sm-8 col-lg-9">${formatDateDE(receipt.receipt_date)}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Eingereicht am</dt>
+            <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.created_at || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Freigegeben am</dt>
+            <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.approved_at || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Ausgezahlt am</dt>
+            <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.paid_at || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Eingereicht von</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.user_display_name || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Freigegeben von</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.approved_by_user_display_name || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Ausgezahlt von</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.paid_by_user_display_name || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Kontoinhaber</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.payout_account_holder || '')}</dd>
+
+            <dt class="col-sm-4 col-lg-3">IBAN</dt>
+            <dd class="col-sm-8 col-lg-9"><code>${escapeHtmlClient(receipt.payout_iban || '')}</code></dd>
+          </dl>
+        `;
+        const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+        modal.show();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function deleteReceipt(id) {
+      if (!confirm('Möchten Sie diesen Beleg wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) return;
+      try {
+        await apiRequest(`/receipt/${id}`, { method: 'DELETE' });
+        await renderMine();
+      } catch (error) {
+        alert(error.message);
       }
     }
 
@@ -390,11 +633,12 @@
           <div class="list-group-item">
             <div class="d-flex justify-content-between flex-wrap gap-2">
               <div>
-                <h5 class="mb-1">${receipt.description}</h5>
-                <p class="mb-1">Eingereicht von: Benutzer #${receipt.user_id}</p>
-                <small>Betrag: ${formatCurrency(receipt.amount_euro)} · Datum: ${receipt.receipt_date}</small>
+                <h5 class="mb-1">${escapeHtmlClient(receipt.description)}</h5>
+                <p class="mb-1">Eingereicht von: ${escapeHtmlClient(receipt.user_name || '')}</p>
+                <small>Betrag: ${formatCurrency(receipt.amount_euro)} · Datum: ${formatDateDE(receipt.receipt_date)}</small>
               </div>
-              <div>
+              <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button class="btn btn-outline-secondary btn-sm" data-action="show" data-id="${receipt.id}">Anzeigen</button>
                 <button class="btn btn-success btn-sm" data-action="approve" data-id="${receipt.id}">Genehmigen</button>
                 <button class="btn btn-danger btn-sm" data-action="reject" data-id="${receipt.id}">Ablehnen</button>
               </div>
@@ -434,6 +678,13 @@
             }
           });
         });
+
+        document.querySelectorAll('[data-action="show"]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const id = button.getAttribute('data-id');
+            await showReceiptDetails(id);
+          });
+        });
       } catch (error) {
         setContent(`<div class="alert alert-danger">${escapeHtmlClient(error.message)}</div>`);
       }
@@ -449,11 +700,16 @@
           <div class="list-group-item">
             <div class="d-flex justify-content-between flex-wrap gap-2">
               <div>
-                <h5 class="mb-1">${receipt.description}</h5>
-                <p class="mb-1">Freigegeben am: ${receipt.updated_at}</p>
-                <small>Betrag: ${formatCurrency(receipt.amount_euro)} · Eingereicht von: Benutzer #${receipt.user_id}</small>
+                <h5 class="mb-1">${escapeHtmlClient(receipt.description)}</h5>
+                <p class="mb-1">Freigegeben am: ${formatDateTimeDE(receipt.approved_at || receipt.updated_at)}</p>
+                <small class="d-block">Betrag: ${formatCurrency(receipt.amount_euro)} · Eingereicht von: ${escapeHtmlClient(receipt.user_name || '')}</small>
+                <small class="text-muted d-block">${(receipt.payout_account_holder && receipt.payout_iban) ? `Kontoinhaber: ${escapeHtmlClient(receipt.payout_account_holder)} · IBAN: ${escapeHtmlClient(receipt.payout_iban)}` : 'Keine Kontodaten angegeben'}</small>
               </div>
-              <button class="btn btn-primary btn-sm" data-action="pay" data-id="${receipt.id}">Als ausgezahlt markieren</button>
+              <div class="d-flex gap-2 flex-wrap justify-content-end">
+                <button class="btn btn-outline-secondary btn-sm" data-action="show" data-id="${receipt.id}">Anzeigen</button>
+                <button class="btn btn-outline-danger btn-sm" data-action="reject-approved" data-id="${receipt.id}">Ablehnen</button>
+                <button class="btn btn-primary btn-sm" data-action="pay" data-id="${receipt.id}">Als ausgezahlt markieren</button>
+              </div>
             </div>
           </div>
         `).join('');
@@ -478,6 +734,26 @@
             }
           });
         });
+
+        document.querySelectorAll('[data-action="reject-approved"]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const id = button.getAttribute('data-id');
+            const reason = prompt('Bitte geben Sie optional einen Ablehnungsgrund an:');
+            try {
+              await apiRequest(`/receipt/${id}/reject-approved`, { method: 'POST', body: { comment: reason || '' } });
+              await renderPayout();
+            } catch (error) {
+              alert(error.message);
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-action="show"]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const id = button.getAttribute('data-id');
+            await showReceiptDetails(id);
+          });
+        });
       } catch (error) {
         setContent(`<div class="alert alert-danger">${escapeHtmlClient(error.message)}</div>`);
       }
@@ -491,10 +767,13 @@
         const receipts = response.receipts || [];
         const rows = receipts.map((receipt) => `
           <tr>
-            <td>${receipt.description}</td>
+            <td>${escapeHtmlClient(receipt.description)}</td>
             <td><span class="badge ${getStatusBadge(receipt.status)}">${getStatusLabel(receipt.status)}</span></td>
-            <td>${receipt.updated_at}</td>
-            <td>${receipt.receipt_date}</td>
+            <td>${formatDateTimeDE(receipt.updated_at)}</td>
+            <td>${formatDateDE(receipt.receipt_date)}</td>
+            <td class="text-nowrap">
+              <button class="btn btn-sm btn-outline-primary" data-action="show" data-id="${receipt.id}">Anzeigen</button>
+            </td>
           </tr>
         `).join('');
 
@@ -510,6 +789,7 @@
                       <th>Status</th>
                       <th>Letzte Änderung</th>
                       <th>Datum</th>
+                      <th style="width: 1%">Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>${rows}</tbody>
@@ -518,6 +798,14 @@
             </div>
           </div>
         `);
+
+        // Wire up show handlers
+        document.querySelectorAll('[data-action="show"]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            await showReceiptDetails(id);
+          });
+        });
       } catch (error) {
         setContent(`<div class="alert alert-danger">${escapeHtmlClient(error.message)}</div>`);
       }
@@ -547,6 +835,23 @@
         const response = await apiRequest('/auth/me');
         authUser = response.user;
         role = authUser.role;
+        // If admin, allow switching between views and restore last selection
+        if (authUser.role === 'admin') {
+          try {
+            const saved = localStorage.getItem('adminViewRole');
+            if (saved && adminSelectableViews.includes(saved)) {
+              role = saved;
+            } else {
+              role = 'user';
+            }
+          } catch (_) {
+            role = 'user';
+          }
+        }
+        // Ensure active page exists for the selected role
+        if (!pages[role].some(p => p.id === activePage)) {
+          activePage = 'home';
+        }
         renderNav();
         const page = pages[role].find((entry) => entry.id === activePage) || pages[role][0];
         page.view();

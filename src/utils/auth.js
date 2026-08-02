@@ -90,13 +90,16 @@ export async function getMicrosoftUserInfo(accessToken) {
 }
 
 export async function getMicrosoftGroups(accessToken) {
-  const { body, statusCode } = await request('https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName', {
+  // Use group mail addresses (not display names) for role mapping.
+  // Cast to groups so Graph only returns group objects and supports selecting 'mail'.
+  const { body, statusCode } = await request('https://graph.microsoft.com/v1.0/me/memberOf/microsoft.graph.group?$select=mail', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const json = await body.json();
   if (statusCode >= 400) throw new Error('Failed to fetch groups');
-  const names = (json.value || []).map(g => g.displayName).filter(Boolean);
-  return names;
+  // Only groups have a mail attribute; others (e.g., directory roles) will be falsy and filtered out
+  const mails = (json.value || []).map(g => g.mail).filter(Boolean);
+  return mails;
 }
 
 export function mapRoleFromGroups(groupNames) {
