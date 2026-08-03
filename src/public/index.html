@@ -10,6 +10,26 @@
     main { flex: 1; }
     .status-badge { min-width: 120px; }
     .nav-link.active { font-weight: 600; }
+
+    /* Role-based theme for navbar background */
+    /* Default (user = blue) */
+    body.role-user .navbar { background-color: #0d6efd !important; }
+    /* Freigeber = green */
+    body.role-freigeber .navbar { background-color: #198754 !important; }
+    /* Kassenwart = orange */
+    body.role-kassenwart .navbar { background-color: #fd7e14 !important; }
+
+    /* Special tabs (hoheitliche Felder) styling in navbar for freigeber */
+    body.role-freigeber .navbar .nav-link.special-tab { color: #ffd54f !important; font-weight: 600; }
+    body.role-freigeber .navbar .nav-link.special-tab.active { color: #ffd54f !important; text-decoration: underline; }
+    /* Improve contrast on orange theme */
+    body.role-kassenwart .navbar .nav-link.special-tab { color: #0d6efd !important; font-weight: 600; }
+    body.role-kassenwart .navbar .nav-link.special-tab.active { color: #0d6efd !important; text-decoration: underline; }
+
+    /* Role-based table header coloring */
+    body.role-user .table thead th { background-color: #0d6efd; color: #fff; }
+    body.role-freigeber .table thead th { background-color: #198754; color: #fff; }
+    body.role-kassenwart .table thead th { background-color: #fd7e14; color: #212529; }
   </style>
 </head>
 <body>
@@ -134,6 +154,18 @@
       }
     }
 
+    // IDs of hoheitliche Tabs
+    const specialTabIds = new Set(['approval', 'history', 'payout']);
+
+    // Apply role-based theme (navbar + table headers)
+    function updateRoleTheme() {
+      const body = document.body;
+      const roleClasses = ['role-user', 'role-freigeber', 'role-kassenwart'];
+      roleClasses.forEach(c => body.classList.remove(c));
+      const roleClass = (role === 'freigeber' || role === 'kassenwart') ? `role-${role}` : 'role-user';
+      body.classList.add(roleClass);
+    }
+
     function apiUrl(path) {
       const normalizedPath = path.startsWith('/') ? path : `/${path}`;
       return `${apiBase}${normalizedPath}`;
@@ -174,6 +206,9 @@
         return;
       }
 
+      // Update role-based theming
+      updateRoleTheme();
+
       // Role label / role switcher for admins
       if (authUser.role === 'admin') {
         const currentLabel = getRoleLabel(role);
@@ -198,7 +233,9 @@
       pages[role].forEach((page) => {
         const li = document.createElement('li');
         li.className = 'nav-item';
-        li.innerHTML = `<a class="nav-link text-white ${page.id === activePage ? 'active' : ''}" href="#${page.id}">${page.label}</a>`;
+        const isSpecial = specialTabIds.has(page.id);
+        const linkClasses = ['nav-link', isSpecial ? 'special-tab' : 'text-white', (page.id === activePage ? 'active' : '')].filter(Boolean).join(' ');
+        li.innerHTML = `<a class="${linkClasses}" href="#${page.id}">${page.label}</a>`;
         li.querySelector('a').addEventListener('click', (e) => {
           e.preventDefault();
           activePage = page.id;
@@ -561,6 +598,40 @@
         const container = document.getElementById('receiptModalBody');
         if (!container) return;
         const pdfLink = receipt.file_path ? `<a href="${escapeHtmlClient(receipt.file_path)}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">PDF öffnen</a>` : '<span class="text-muted">Kein PDF verfügbar</span>';
+
+        const submitterName = receipt.user_display_name || receipt.user_name || '';
+        const approverName = receipt.approved_by_user_name || '';
+        const rejectorName = receipt.rejected_by_user_name || '';
+        const payerName = receipt.paid_by_user_name || receipt.paid_by_user_display_name || '';
+
+        const bankHolder = receipt.payout_account_holder || '';
+        const bankIban = receipt.payout_iban || '';
+        const bankDataAllowed = (bankHolder && bankHolder !== '<protected>') && (bankIban && bankIban !== '<protected>');
+
+        const detailsTableRows = `
+          <tr><th class="text-nowrap">Genehmigungsdatum</th><td>${formatDateTimeDE(receipt.approved_at || '')}</td></tr>
+          <tr><th class="text-nowrap">Genehmiger</th><td>${escapeHtmlClient(approverName)}</td></tr>
+          <tr><th class="text-nowrap">Ablehnungsdatum</th><td>${formatDateTimeDE(receipt.rejected_at || '')}</td></tr>
+          <tr><th class="text-nowrap">Ablehner</th><td>${escapeHtmlClient(rejectorName)}</td></tr>
+          <tr><th class="text-nowrap">Einzahlungsdatum</th><td>${formatDateTimeDE(receipt.paid_at || '')}</td></tr>
+          <tr><th class="text-nowrap">Auszahler</th><td>${escapeHtmlClient(payerName)}</td></tr>
+        `;
+
+        const bankDataSection = bankDataAllowed ? `
+          <div class="form-check form-switch my-3">
+            <input class="form-check-input" type="checkbox" id="toggleBankData">
+            <label class="form-check-label" for="toggleBankData">Kontodaten anzeigen</label>
+          </div>
+          <div id="bankDataSection" class="card card-body d-none">
+            <dl class="row mb-0">
+              <dt class="col-sm-4 col-lg-3">Kontoinhaber</dt>
+              <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(bankHolder)}</dd>
+              <dt class="col-sm-4 col-lg-3">IBAN</dt>
+              <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(bankIban)}</dd>
+            </dl>
+          </div>
+        ` : '';
+
         container.innerHTML = `
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -568,44 +639,58 @@
               ${pdfLink}
             </div>
           </div>
-          <dl class="row mb-0">
+          <dl class="row">
             <dt class="col-sm-4 col-lg-3">Beschreibung</dt>
             <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.description || '')}</dd>
 
             <dt class="col-sm-4 col-lg-3">Betrag</dt>
             <dd class="col-sm-8 col-lg-9">${formatCurrency(receipt.amount_euro)}</dd>
 
-            <dt class="col-sm-4 col-lg-3">Status</dt>
-            <dd class="col-sm-8 col-lg-9"><span class="badge ${getStatusBadge(receipt.status)}">${getStatusLabel(receipt.status)}</span></dd>
-
             <dt class="col-sm-4 col-lg-3">Belegdatum</dt>
             <dd class="col-sm-8 col-lg-9">${formatDateDE(receipt.receipt_date)}</dd>
 
-            <dt class="col-sm-4 col-lg-3">Eingereicht am</dt>
+            <dt class="col-sm-4 col-lg-3">Status</dt>
+            <dd class="col-sm-8 col-lg-9"><span class="badge ${getStatusBadge(receipt.status)}">${getStatusLabel(receipt.status)}</span></dd>
+
+            <dt class="col-sm-4 col-lg-3">Einreichende Person</dt>
+            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(submitterName)}</dd>
+
+            <dt class="col-sm-4 col-lg-3">Einreichdatum</dt>
             <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.created_at || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Freigegeben am</dt>
-            <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.approved_at || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Ausgezahlt am</dt>
-            <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.paid_at || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Eingereicht von</dt>
-            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.user_display_name || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Freigegeben von</dt>
-            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.approved_by_user_display_name || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Ausgezahlt von</dt>
-            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.paid_by_user_display_name || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">Kontoinhaber</dt>
-            <dd class="col-sm-8 col-lg-9">${escapeHtmlClient(receipt.payout_account_holder || '')}</dd>
-
-            <dt class="col-sm-4 col-lg-3">IBAN</dt>
-            <dd class="col-sm-8 col-lg-9"><code>${escapeHtmlClient(receipt.payout_iban || '')}</code></dd>
           </dl>
+
+          <div class="accordion my-3" id="receiptMoreDetails">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingMoreDetails">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMoreDetails" aria-expanded="false" aria-controls="collapseMoreDetails">
+                  Weitere Details
+                </button>
+              </h2>
+              <div id="collapseMoreDetails" class="accordion-collapse collapse" aria-labelledby="headingMoreDetails" data-bs-parent="#receiptMoreDetails">
+                <div class="accordion-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                      <tbody>
+                        ${detailsTableRows}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          ${bankDataSection}
         `;
+        // Wire up bank data toggle if present
+        const toggle = container.querySelector('#toggleBankData');
+        if (toggle) {
+          toggle.addEventListener('change', () => {
+            const section = container.querySelector('#bankDataSection');
+            if (!section) return;
+            section.classList.toggle('d-none', !toggle.checked);
+          });
+        }
         const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
         modal.show();
       } catch (error) {
@@ -634,7 +719,7 @@
             <div class="d-flex justify-content-between flex-wrap gap-2">
               <div>
                 <h5 class="mb-1">${escapeHtmlClient(receipt.description)}</h5>
-                <p class="mb-1">Eingereicht von: ${escapeHtmlClient(receipt.user_name || '')}</p>
+                <p class="mb-1">Eingereicht von: ${escapeHtmlClient(receipt.user_display_name || receipt.user_name || '')}</p>
                 <small>Betrag: ${formatCurrency(receipt.amount_euro)} · Datum: ${formatDateDE(receipt.receipt_date)}</small>
               </div>
               <div class="d-flex gap-2 flex-wrap justify-content-end">
@@ -702,7 +787,7 @@
               <div>
                 <h5 class="mb-1">${escapeHtmlClient(receipt.description)}</h5>
                 <p class="mb-1">Freigegeben am: ${formatDateTimeDE(receipt.approved_at || receipt.updated_at)}</p>
-                <small class="d-block">Betrag: ${formatCurrency(receipt.amount_euro)} · Eingereicht von: ${escapeHtmlClient(receipt.user_name || '')}</small>
+                <small class="d-block">Betrag: ${formatCurrency(receipt.amount_euro)} · Eingereicht von: ${escapeHtmlClient(receipt.user_display_name || receipt.user_name || '')}</small>
                 <small class="text-muted d-block">${(receipt.payout_account_holder && receipt.payout_iban) ? `Kontoinhaber: ${escapeHtmlClient(receipt.payout_account_holder)} · IBAN: ${escapeHtmlClient(receipt.payout_iban)}` : 'Keine Kontodaten angegeben'}</small>
               </div>
               <div class="d-flex gap-2 flex-wrap justify-content-end">

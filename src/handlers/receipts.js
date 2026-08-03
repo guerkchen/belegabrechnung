@@ -111,6 +111,8 @@ export async function createReceiptHandler(request, user) {
   const doc = await createReceipt({
     user_id: user.id,
     user_name: user.display_name,
+    // Also persist a consistent display name field for submitter
+    user_display_name: user.display_name,
     description,
     amount_euro: amount,
     receipt_date,
@@ -259,7 +261,7 @@ export async function approveReceiptHandler(request, user, id) {
   const receipt = await getReceiptById(id);
   if (!receipt) return jsonResponse({ error: 'Receipt not found' }, 404);
   if (receipt.status !== STATUSES.PENDING) return jsonResponse({ error: 'Receipt is not pending approval' }, 400);
-  await updateReceiptDoc(id, { status: STATUSES.APPROVED, approved_at: new Date().toISOString(), approved_by_user_id: user.id, approved_by_user_display_name: user.display_name });
+  await updateReceiptDoc(id, { status: STATUSES.APPROVED, approved_at: new Date().toISOString(), approved_by_user_id: user.id, approved_by_user_name: user.display_name });
   await appendHistory({ receipt_id: id, old_status: receipt.status, new_status: STATUSES.APPROVED, changed_by_user_id: user.id, comment: 'Approved' });
   return jsonResponse({ message: 'Receipt approved successfully' });
 }
@@ -275,7 +277,12 @@ export async function rejectReceiptHandler(request, user, id) {
     return jsonResponse({ error: e.message || 'Invalid JSON body' }, 400);
   }
   const comment = escapeHtml(String(body.comment || '').trim());
-  await updateReceiptDoc(id, { status: STATUSES.REJECTED, rejected_at: new Date().toISOString(), rejected_by_user_id: user.id });
+  await updateReceiptDoc(id, {
+    status: STATUSES.REJECTED,
+    rejected_at: new Date().toISOString(),
+    rejected_by_user_id: user.id,
+    rejected_by_user_name: user.display_name,
+  });
   await appendHistory({ receipt_id: id, old_status: receipt.status, new_status: STATUSES.REJECTED, changed_by_user_id: user.id, comment: comment || 'Rejected' });
   return jsonResponse({ message: 'Receipt rejected successfully' });
 }
@@ -288,7 +295,8 @@ export async function payReceiptHandler(request, user, id) {
     status: STATUSES.PAID,
     paid_at: new Date().toISOString(),
     paid_by_user_id: user.id,
-    paid_by_user_display_name: user.display_name,
+    // Standardize on *_user_name for display in UI
+    paid_by_user_name: user.display_name,
   });
   await appendHistory({ receipt_id: id, old_status: receipt.status, new_status: STATUSES.PAID, changed_by_user_id: user.id, comment: 'Paid' });
   return jsonResponse({ message: 'Receipt paid successfully' });
@@ -316,6 +324,8 @@ export async function treasurerRejectApprovedReceiptHandler(request, user, id) {
     status: STATUSES.REJECTED,
     rejected_at: new Date().toISOString(),
     rejected_by_user_id: user.id,
+    // Store display name so UI can show the user
+    rejected_by_user_name: user.display_name,
   });
   await appendHistory({
     receipt_id: id,
