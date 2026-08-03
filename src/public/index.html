@@ -182,7 +182,7 @@
             <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="roleSwitcher" data-bs-toggle="dropdown" aria-expanded="false">
               Ansicht: ${currentLabel}
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="roleSwitcher">
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="roleSwitcher">
               ${adminSelectableViews.map(v => `
                 <li><a class="dropdown-item ${v === role ? 'active' : ''}" href="#" data-role-option="${v}">${getRoleLabel(v)}</a></li>
               `).join('')}
