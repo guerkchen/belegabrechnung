@@ -15,7 +15,7 @@ const groupRoleMapEnv = config.MICROSOFT_GROUP_ROLE_MAP;
 function parseGroupRoleMap() {
   const map = new Map();
   for (const pair of groupRoleMapEnv.split(',')) {
-    const [g, r] = pair.split('=').map(s => s && s.trim());
+    const [g, r] = pair.split('=').map(s => s && s.trim().toLowerCase());
     if (g && r) map.set(g, r);
   }
   return map;
@@ -98,7 +98,7 @@ export async function getMicrosoftGroups(accessToken) {
   const json = await body.json();
   if (statusCode >= 400) throw new Error('Failed to fetch groups');
   // Only groups have a mail attribute; others (e.g., directory roles) will be falsy and filtered out
-  const mails = (json.value || []).map(g => g.mail).filter(Boolean);
+  const mails = (json.value || []).map(g => g.mail && g.mail.toLowerCase()).filter(Boolean);
   return mails;
 }
 
