@@ -94,6 +94,13 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
+    // Decode HTML entities (useful to edit server-sanitized text without double-escaping)
+    function decodeHtmlClient(input) {
+      if (input === null || input === undefined) return '';
+      const txt = document.createElement('textarea');
+      txt.innerHTML = String(input);
+      return txt.value;
+    }
     // Configuration
     const apiBase = '/api';
 
@@ -448,6 +455,10 @@
                 <label class="form-label">PDF-Datei</label>
                 <input name="file" type="file" class="form-control" accept="application/pdf" required>
               </div>
+              <div class="mb-3">
+                <label class="form-label">Kommentar (optional)</label>
+                <textarea name="comment" class="form-control" rows="2" maxlength="1000" placeholder="Notiz zum Beleg (max. 1000 Zeichen)"></textarea>
+              </div>
                 <hr />
                 <div class="mb-2">
                   <div class="form-text">Optional: Kontodaten für die Auszahlung. Bitte beide Felder ausfüllen, wenn Sie eine Kontoverbindung angeben möchten.</div>
@@ -496,7 +507,8 @@
             receipt_date: formData.get('receipt_date'),
             file: { name: file.name, mimeType: file.type || 'application/pdf', base64 },
             payout_account_holder: holder || '',
-            payout_iban: iban || ''
+            payout_iban: iban || '',
+            comment: String(formData.get('comment') || '').trim(),
           };
           const response = await apiRequest('/receipts', { method: 'POST', body: payload });
           alert(response.message || 'Beleg wurde eingereicht');
@@ -632,6 +644,14 @@
           </div>
         ` : '';
 
+        const isOwner = authUser && receipt && String(receipt.user_id) === String(authUser.id);
+        const commentText = String(receipt.user_comment || '');
+        const commentSection = `
+          <div class="my-3">
+            <h6 class="mb-2">Kommentar</h6>
+            <div id="commentDisplay">${commentText ? `<div class="p-2 border rounded bg-light">${escapeHtmlClient(commentText)}</div>` : '<span class="text-muted">Kein Kommentar vorhanden</span>'}</div>
+          </div>`;
+
         container.innerHTML = `
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -658,6 +678,8 @@
             <dt class="col-sm-4 col-lg-3">Einreichdatum</dt>
             <dd class="col-sm-8 col-lg-9">${formatDateTimeDE(receipt.created_at || '')}</dd>
           </dl>
+
+          ${commentSection}
 
           <div class="accordion my-3" id="receiptMoreDetails">
             <div class="accordion-item">

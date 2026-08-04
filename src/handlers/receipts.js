@@ -84,6 +84,8 @@ export async function createReceiptHandler(request, user) {
   const payout_account_holder = escapeHtml(String(body.payout_account_holder || '').trim());
   const payout_iban_raw = String(body.payout_iban || '').trim();
   const payout_iban = normalizeIban(payout_iban_raw);
+  const user_comment_raw = String(body.comment || '').substring(0, 1000).trim();
+  const user_comment = user_comment_raw ? escapeHtml(user_comment_raw) : null;
 
   if (!description || !amount || !receipt_date || !file) {
     return jsonResponse({ error: 'description, amount, receipt_date and file are required' }, 400);
@@ -122,6 +124,7 @@ export async function createReceiptHandler(request, user) {
     status: STATUSES.PENDING,
     payout_account_holder: payout_account_holder || null,
     payout_iban: payout_iban || null,
+    user_comment,
   });
   await appendHistory({ receipt_id: doc.id, old_status: null, new_status: STATUSES.PENDING, changed_by_user_id: user.id, comment: 'Submitted' });
   return jsonResponse({ message: 'Receipt submitted successfully', receipt_id: doc.id }, 201);

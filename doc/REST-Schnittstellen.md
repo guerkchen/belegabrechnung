@@ -43,12 +43,11 @@ Diese Datei definiert eine erste REST-API-Übersicht für die Webapp auf Basis d
 | Methode | Endpoint | Zweck | Erlaubt für |
 |---|---|---|---|
 | GET | /api/auth/me | Aktuellen Benutzer mit Rolle und Rechten zurückgeben | Alle authentifizierten Nutzer |
-
 ### 2. Belege verwalten
 
 | Methode | Endpoint | Zweck | Erlaubt für |
 |---|---|---|---|
-| POST | /api/receipts | Neuen Beleg hochladen (PDF + Beschreibung, Betrag, Belegdaten) – optional mit Kontodaten (Kontoinhaber, IBAN) | User, Freigeber, Kassenwart |
+| POST | /api/receipts | Neuen Beleg hochladen (PDF + Beschreibung, Betrag, Belegdaten) – optional mit Kommentar und Kontodaten (Kontoinhaber, IBAN). Hinweis: Kommentar ist nach dem Einreichen nicht mehr änderbar. | User, Freigeber, Kassenwart |
 | GET | /api/receipt/{id} | Details zu einem bestimmten Beleg | Besitzer, Freigeber, Kassenwart |
 | PUT | /api/receipt/{id} | Beleg bearbeiten (nur wenn noch nicht freigegeben/abgelehnt wurde) | Besitzer |
 | DELETE | /api/receipt/{id} | Beleg löschen (nur im Status "zur Freigabe") | Besitzer |
@@ -90,7 +89,10 @@ Hinweis: Für ID-basierte Beleg-Endpunkte wird bewusst die Singular-Ressource "/
  - Sichtbarkeit Kontodaten:
    - Besitzer (Einreicher) sieht Kontodaten seiner eigenen Belege.
    - Kassenwart (und Admin) sieht Kontodaten aller Belege.
-   - Andere User und Freigeber sehen stattdessen den Platzhalter „<protected>“.
+ - Nutzerkommentar:
+   - Optionales Feld comment beim Erstellen eines Belegs. Serverseitig als user_comment gespeichert und HTML-gesäubert.
+   - Wird in der Belegansicht angezeigt.
+   - Kommentar ist unveränderlich (keine API zum nachträglichen Ändern oder Löschen). Maximale Länge: 1000 Zeichen.
 
 ## MVP vs. Ausbau
 

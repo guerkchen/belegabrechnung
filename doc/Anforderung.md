@@ -56,3 +56,5 @@ Als Administrator möchte ich in der Lage sein, über ein Dropdown Menü zwische
 Als User möchte ich beim Einreichen des Belegs die Möglichkeit haben, ein Konto für die Auszahlung (Name des Kontobesitzers und IBAN) anzugeben. Diese Daten sollen dem Schatzmeister in der Auszahlungsansicht und der Belegansicht sichtbar sein. Die Kontodaten sollen mir nur bei meinen eigenen Belegen angezeigt werden. Der Kassenwart soll alle Kontodaten sehen können. Anderen Usern und den Freigebern wird "<protected>" angezeigt.
 
 Als User möchte ich beim Einreichen eines neuen Belegs die Möglichkeit haben einen Knopf zu drücken "Kontodaten aus letzter Abrechnung laden". Damit werden der Kontoinhaber und die IBAN mit den Daten aus meinem zuletzt eingereichten Beleg befüllt.
+
+Als User möchte ich in der Lage sein, zu meinen eingereichten Beleg ein Kommentar zu hinterlegen. Das Kommentar wird in der Belegansicht mit aufgeführt.
